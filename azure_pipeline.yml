@@ -1,0 +1,36 @@
+# Deploy database changes using snowchange
+# https://github.com/Snowflake-Labs/snowchange
+# (see https://aka.ms/yaml for the YAML schema reference)
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - /
+pool:
+  vmImage: 'ubuntu-latest'
+variables:
+- group: snowchange_variables
+steps:
+- task: UsePythonVersion@0
+  displayName: 'Use Python 3.7'
+  inputs:
+    versionSpec: '3.7'
+- task: bash@3
+  inputs:
+    targetType: 'inline'
+    script: |
+      echo 'Starting bash task'
+      echo "PROJECT_FOLDER $(PROJECT_FOLDER)"
+      python --version
+      echo 'Step 1: Installing snowflake connector library'
+      echo $(connect_ver)
+      pip install --upgrade snowflake-connector-python==$(connect_ver)
+      echo 'Step 2: Running snowchange'
+      cd $(PROJECT_FOLDER)/ snowchangedemo    
+      python --version 
+     
+      python snowchange.py -f ./ -a $(SNOWFLAKE_ACCOUNT) -u $(SNOWFLAKE_USERNAME) -r $(SNOWFLAKE_ROLE) -w $(SNOWFLAKE_WAREHOUSE) -d $(SNOWFLAKE_DATABASE) -c $(SNOWFLAKE_DATABASE).SNOWCHANGE.CHANGE_HISTORY --create-change-history-table
+  env:
+    SNOWFLAKE_PASSWORD: $(SNOWFLAKE_PASSWORD)
