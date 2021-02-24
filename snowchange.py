@@ -11,7 +11,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import dsa
 from cryptography.hazmat.primitives import serialization
-print("after lib")
+
 
 # Set a few global variables here
 _snowchange_version = '2.8.0'
@@ -33,22 +33,18 @@ class JinjaExpressionTemplate(string.Template):
     (?P<invalid>)
     )
     '''
-print("snowchange version: %s" % _snowchange_version)
-print("Using variables %s" % vars)
-   
-print("before snowchange")
+
 
 def snowchange(root_folder, snowflake_account, snowflake_user, snowflake_role, snowflake_warehouse, snowflake_database, change_history_table_override, vars, create_change_history_table, autocommit, verbose, dry_run):
-  print("after snowchange")
+  
   if dry_run:
-    print("Running in dry-run mode")
+    
 
   # Password authentication will take priority
   if "SNOWFLAKE_PASSWORD" not in os.environ and "SNOWSQL_PWD" not in os.environ:  # We will accept SNOWSQL_PWD for now, but it is deprecated
     if "SNOWFLAKE_PRIVATE_KEY_PATH" not in os.environ or "SNOWFLAKE_PRIVATE_KEY_PASSPHRASE" not in os.environ:
       raise ValueError("Missing environment variable(s). SNOWFLAKE_PASSWORD must be defined for password authentication. SNOWFLAKE_PRIVATE_KEY_PATH and SNOWFLAKE_PRIVATE_KEY_PASSPHRASE must be defined for private key authentication.")
 
-  print("root folder")
   root_folder = os.path.abspath(root_folder)
   if not os.path.isdir(root_folder):
     raise ValueError("Invalid root folder: %s" % root_folder)
@@ -67,7 +63,7 @@ def snowchange(root_folder, snowflake_account, snowflake_user, snowflake_role, s
   }
 
   # TODO: Is there a better way to do this without setting environment variables?
-  print("before env var") 
+  
 
   os.environ["SNOWFLAKE_ACCOUNT"] = snowflake_account
   os.environ["SNOWFLAKE_USER"] = snowflake_user
@@ -137,16 +133,15 @@ def snowchange(root_folder, snowflake_account, snowflake_user, snowflake_role, s
 # Each number is converted to and integer and string parts are left as strings
 # This will enable correct sorting in python when the lists are compared
 # e.g. get_alphanum_key('1.2.2') results in ['', 1, '.', 2, '.', 2, '']
-print("before get_alphanum_key")
+
 def get_alphanum_key(key):
-  print("inside get_alphanum_key")    
+      
   convert = lambda text: int(text) if text.isdigit() else text.lower()
   alphanum_key = [ convert(c) for c in re.split('([0-9]+)', key) ]
   return alphanum_key
-print("before sorted_alphanumeric")
 def sorted_alphanumeric(data):
   return sorted(data, key=get_alphanum_key)
-print("before get_all_scripts_recursively")
+
 def get_all_scripts_recursively(root_directory, verbose):
   all_files = dict()
   all_versions = list()
@@ -188,9 +183,9 @@ def get_all_scripts_recursively(root_directory, verbose):
         all_versions.append(script['script_version'])
 
   return all_files
-print("before execute_snowflake_query")
+
 def execute_snowflake_query(snowflake_database, query, snowflake_session_parameters, autocommit, verbose):
-  print("execute_snowflake_query")
+  
   # Password authentication is the default
   snowflake_password = None
   if os.getenv("SNOWFLAKE_PASSWORD") is not None and os.getenv("SNOWFLAKE_PASSWORD"):
@@ -260,7 +255,7 @@ def execute_snowflake_query(snowflake_database, query, snowflake_session_paramet
     raise e
   finally:
     con.close()
-print("before get_change_history_table_details")
+
 def get_change_history_table_details(change_history_table_override):
   # Start with the global defaults
   details = dict()
@@ -285,7 +280,7 @@ def get_change_history_table_details(change_history_table_override):
       raise ValueError("Invalid change history table name: %s" % change_history_table_override)
 
   return details
-print("before fetch_change_history_metadata")
+
 def fetch_change_history_metadata(change_history_table, snowflake_session_parameters, autocommit, verbose):
   # This should only ever return 0 or 1 rows
   query = "SELECT CREATED, LAST_ALTERED FROM {0}.INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA ILIKE '{1}' AND TABLE_NAME ILIKE '{2}'".format(change_history_table['database_name'], change_history_table['schema_name'], change_history_table['table_name'])
@@ -299,7 +294,7 @@ def fetch_change_history_metadata(change_history_table, snowflake_session_parame
       change_history_metadata['last_altered'] = row[1]
 
   return change_history_metadata
-print("before create_change_history_table_if_missing")
+
 def create_change_history_table_if_missing(change_history_table, snowflake_session_parameters, autocommit, verbose):
   # Create the schema if it doesn't exist
   query = "CREATE SCHEMA IF NOT EXISTS {0}".format(change_history_table['schema_name'])
@@ -308,7 +303,7 @@ def create_change_history_table_if_missing(change_history_table, snowflake_sessi
   # Finally, create the change history table if it doesn't exist
   query = "CREATE TABLE IF NOT EXISTS {0}.{1} (VERSION VARCHAR, DESCRIPTION VARCHAR, SCRIPT VARCHAR, SCRIPT_TYPE VARCHAR, CHECKSUM VARCHAR, EXECUTION_TIME NUMBER, STATUS VARCHAR, INSTALLED_BY VARCHAR, INSTALLED_ON TIMESTAMP_LTZ)".format(change_history_table['schema_name'], change_history_table['table_name'])
   execute_snowflake_query(change_history_table['database_name'], query, snowflake_session_parameters, autocommit, verbose)
-print("before fetch_change_history")
+
 def fetch_change_history(change_history_table, snowflake_session_parameters, autocommit, verbose):
   query = "SELECT VERSION FROM {0}.{1} WHERE SCRIPT_TYPE = 'V' ORDER BY INSTALLED_ON DESC LIMIT 1".format(change_history_table['schema_name'], change_history_table['table_name'])
   results = execute_snowflake_query(change_history_table['database_name'], query, snowflake_session_parameters, autocommit, verbose)
@@ -320,7 +315,7 @@ def fetch_change_history(change_history_table, snowflake_session_parameters, aut
       change_history.append(row[0])
 
   return change_history
-print("before apply_change_script")
+
 def apply_change_script(script, vars, default_database, change_history_table, snowflake_session_parameters, autocommit, verbose):
   # First read the contents of the script
   with open(script['script_full_path'],'r') as content_file:
@@ -347,17 +342,17 @@ def apply_change_script(script, vars, default_database, change_history_table, sn
   # Finally record this change in the change history table
   query = "INSERT INTO {0}.{1} (VERSION, DESCRIPTION, SCRIPT, SCRIPT_TYPE, CHECKSUM, EXECUTION_TIME, STATUS, INSTALLED_BY, INSTALLED_ON) values ('{2}','{3}','{4}','{5}','{6}',{7},'{8}','{9}',CURRENT_TIMESTAMP);".format(change_history_table['schema_name'], change_history_table['table_name'], script['script_version'], script['script_description'], script['script_name'], script['script_type'], checksum, execution_time, status, os.environ["SNOWFLAKE_USER"])
   execute_snowflake_query(change_history_table['database_name'], query, snowflake_session_parameters, autocommit, verbose)
-print("before replace_variables_references")
+
 # This method will throw an error if there are any leftover variables in the change script
 # Since a leftover variable in the script isn't valid SQL, and will fail when run it's
 # better to throw an error here and have the user fix the problem ahead of time.
 def replace_variables_references(content, vars, verbose):
   t = JinjaExpressionTemplate(content)
   return t.substitute(vars)
-print("before main")
+
  
 def main():
-  print("after main11")
+  
   parser = argparse.ArgumentParser(prog = 'snowchange', description = 'Apply schema changes to a Snowflake account. Full readme at https://github.com/Snowflake-Labs/snowchange', formatter_class = argparse.RawTextHelpFormatter)
   parser.add_argument('-f','--root-folder', type = str, default = ".", help = 'The root folder for the database change scripts', required = False)
   parser.add_argument('-a', '--snowflake-account', type = str, help = 'The name of the snowflake account (e.g. xy12345.east-us-2.azure)', required = True)
@@ -371,12 +366,12 @@ def main():
   parser.add_argument('-ac', '--autocommit', action='store_true', help = 'Enable autocommit feature for DML commands (the default is False)', required = False)
   parser.add_argument('-v','--verbose', action='store_true', help = 'Display verbose debugging details during execution (the default is False)', required = False)
   parser.add_argument('--dry-run', action='store_true', help = 'Run snowchange in dry run mode (the default is False)', required = False)
-  print("before args")
+  
   args = parser.parse_args()
   print(__name__)
   snowchange(args.root_folder, args.snowflake_account, args.snowflake_user, args.snowflake_role, args.snowflake_warehouse, args.snowflake_database, args.change_history_table, args.vars, args.create_change_history_table, args.autocommit, args.verbose, args.dry_run)
-  print("after snowchange")
+  
   
 if __name__ == "__main__":
-    print("after main")     
+      
     main() 
